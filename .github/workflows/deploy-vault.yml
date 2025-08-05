@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [ubuntu-latest, develop, stage, dev, dev-deployment, tunde]
+    runs-on: [self-hosted, tunde]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
