@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: vault-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vault
+      POSTGRES_PASSWORD: vaultpass
+      POSTGRES_DB: vaultdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - vault_net
+
+  vault:
+    image: hashicorp/vault:1.15.2
+    container_name: vault
+    restart: unless-stopped
+    environment:
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_API_ADDR: http://vault:8200
+    volumes:
+      - ./vault:/vault/config
+    command: vault server -config=/vault/config/config.hcl
+    depends_on:
+      - postgres
+    expose:
+      - "8200"
+    networks:
+      - vault_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - vault
+    networks:
+      - vault_net
+
+volumes:
+  pgdata:
+
+networks:
+  vault_net:
+    driver: bridge
