@@ -30,20 +30,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             # Install Docker if missing
-            # One-liner setup for self-hosted GitHub Actions runner
-              sudo apt-get update && \
-              sudo apt-get install -y curl jq gnupg lsb-release ca-certificates apt-transport-https && \
-              curl -fsSL https://get.docker.com -o get-docker.sh && \
-              sh get-docker.sh && \
-              sudo usermod -aG docker $USER && \
-              sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" \
-                -o /usr/local/bin/docker-compose && \
-              sudo chmod +x /usr/local/bin/docker-compose && \
-              newgrp docker && \
-              docker --version && \
-              docker-compose --version && \
-              jq --version
-
+            
             if ! command -v docker &>/dev/null; then
               curl -fsSL https://get.docker.com -o get-docker.sh
               sh get-docker.sh
