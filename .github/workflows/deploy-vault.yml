@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: [self-hosted, tunde]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -21,39 +22,51 @@ jobs:
           source: "."
           target: "~/vaultsetup"
 
-      - name: Install Docker & Docker Compose, then Deploy
+      - name: Install Docker, Compose, jq and Deploy Vault
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Install Docker if not present
-            if ! command -v docker &> /dev/null; then
+            # Install Docker if missing
+            if ! command -v docker &>/dev/null; then
               curl -fsSL https://get.docker.com -o get-docker.sh
               sh get-docker.sh
               sudo usermod -aG docker $USER
+              newgrp docker
             fi
 
-            # Install Docker Compose if not present
-            if ! command -v docker-compose &> /dev/null; then
+            # Install Docker Compose if missing
+            if ! command -v docker-compose &>/dev/null; then
               sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
             fi
 
+            # Install jq if missing
+            if ! command -v jq &>/dev/null; then
+              sudo apt-get update && sudo apt-get install -y jq
+            fi
+
+            # Deploy Vault
             cd ~/vaultsetup
             docker-compose up -d --remove-orphans
 
-      - name: Initialize and Unseal Vault
+      - name: Initialize and Configure Vault
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            cd ~/vaultsetup
+
+            # Wait for Vault container to be ready
+            echo "Waiting for Vault to be ready..."
+            sleep 10
+
             # Initialize Vault and capture output
-            INIT_OUTPUT=$(docker exec -it vault vault operator init -format=json)
-            echo "$INIT_OUTPUT" > vault-init.json
+            docker exec vault vault operator init -format=json > vault-init.json
 
             # Extract unseal keys and root token
             UNSEAL_KEY_1=$(jq -r '.unseal_keys_b64[0]' vault-init.json)
@@ -62,31 +75,31 @@ jobs:
             ROOT_TOKEN=$(jq -r '.root_token' vault-init.json)
 
             # Unseal Vault
-            docker exec -it vault vault operator unseal $UNSEAL_KEY_1
-            docker exec -it vault vault operator unseal $UNSEAL_KEY_2
-            docker exec -it vault vault operator unseal $UNSEAL_KEY_3
+            docker exec vault vault operator unseal $UNSEAL_KEY_1
+            docker exec vault vault operator unseal $UNSEAL_KEY_2
+            docker exec vault vault operator unseal $UNSEAL_KEY_3
 
-            # Login to Vault
-            docker exec -it vault vault login $ROOT_TOKEN
+            # Login
+            docker exec vault vault login $ROOT_TOKEN
 
             # Enable userpass auth
-            docker exec -it vault vault auth enable userpass
+            docker exec vault vault auth enable userpass
 
-            # Create user
-            docker exec -it vault vault write auth/userpass/users/${{ secrets.USER_NAME }} password=${{ secrets.PASSWORD }} policies=my-policy
-
-            # Create policy file
-            docker exec -it vault sh -c 'echo "
+            # Create Vault policy file
+            docker exec vault sh -c 'echo "
             path \"secret/data/*\" {
               capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"]
             }
             " > /vault/config/my-policy.hcl'
 
-            # Write policy
-            docker exec -it vault vault policy write my-policy /vault/config/my-policy.hcl
+            # Write policy to Vault
+            docker exec vault vault policy write my-policy /vault/config/my-policy.hcl
 
-            # Enable kv secrets engine
-            docker exec -it vault vault secrets enable -path=secret kv-v2
+            # Create Vault user
+            docker exec vault vault write auth/userpass/users/${{ secrets.USER_NAME }} password=${{ secrets.PASSWORD }} policies=my-policy
 
-            # Add secret
-            docker exec -it vault vault kv put secret/myapp username=${{ secrets.USER_NAME }} password=${{ secrets.PASSWORD }}
+            # Enable kv-v2 secrets engine
+            docker exec vault vault secrets enable -path=secret kv-v2
+
+            # Store a secret
+            docker exec vault vault kv put secret/myapp username=${{ secrets.USER_NAME }} password=${{ secrets.PASSWORD }}
