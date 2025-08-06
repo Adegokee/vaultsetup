@@ -1,4 +1,4 @@
-name: Deploy & Initialize Vault
+name: Deploy & Initialize Vault-integration
 
 on:
   push:
