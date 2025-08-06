@@ -73,7 +73,7 @@ jobs:
             docker exec -it vault vault auth enable userpass
 
             # Create user
-            docker exec -it vault vault write auth/userpass/users/${{secret.USER_NAME }} password=${{secret.PASSWORD }} policies=my-policy
+            docker exec -it vault vault write auth/userpass/users/${{ secret.USER_NAME }} password=${{ secret.PASSWORD }} policies=my-policy
 
             # Create policy file
             docker exec -it vault sh -c 'echo "
@@ -89,4 +89,4 @@ jobs:
             docker exec -it vault vault secrets enable -path=secret kv-v2
 
             # Add secret
-            docker exec -it vault vault kv put secret/myapp username=${{ secret.USER_NAME }} password=${{secret.PASSWORD }}
+            docker exec -it vault vault kv put secret/myapp username=${{ secret.USER_NAME }} password=${{ secret.PASSWORD }}
