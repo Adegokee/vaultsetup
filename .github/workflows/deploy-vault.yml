@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, tunde, ubuntu-latest, adegoke]
+    runs-on: [self-hosted, tunde, ubuntu-latest]
 
     steps:
       - name: Checkout code
