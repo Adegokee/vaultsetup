@@ -89,4 +89,4 @@ jobs:
             docker exec -it vault vault secrets enable -path=secret kv-v2
 
             # Add secret
-            docker exec -it vault vault kv put secret/myapp username=${{ USER_NAME }} password=${{ secrets.PASSWORD }}
+            docker exec -it vault vault kv put secret/myapp username=${{ USER_NAME }} password=${{PASSWORD }}
