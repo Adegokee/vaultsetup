@@ -1,4 +1,4 @@
-name: Deploy & Initialize Vault-integration
+cname: Deploy & Initialize Vault-integration
 
 on:
   push:
@@ -60,7 +60,7 @@ jobs:
             docker exec -it vault vault auth enable userpass
 
             # Create user
-            ocker exec -it vault vault write auth/userpass/users/${{VAULT_USER }} password=${{VAULT_PASSWORD }} policies=my-policy
+            ocker exec -it vault vault write auth/userpass/users/${{secret.VAULT_USER }} password=${{secret.VAULT_PASSWORD }} policies=my-policy
 
             # Create policy file
             docker exec -it vault sh -c 'echo "
