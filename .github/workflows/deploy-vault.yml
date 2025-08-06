@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, tunde, vaultsetup]
+    runs-on: [self-hosted, tunde]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
