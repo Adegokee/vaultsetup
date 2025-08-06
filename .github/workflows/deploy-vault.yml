@@ -21,13 +21,26 @@ jobs:
           source: "."
           target: "~/vaultsetup"
 
-      - name: Deploy with Docker Compose
+      - name: Install Docker & Docker Compose, then Deploy
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            # Install Docker if not present
+            if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sh get-docker.sh
+              sudo usermod -aG docker $USER
+            fi
+
+            # Install Docker Compose if not present
+            if ! command -v docker-compose &> /dev/null; then
+              sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
             cd ~/vaultsetup
             docker-compose up -d --remove-orphans
 
@@ -60,7 +73,7 @@ jobs:
             docker exec -it vault vault auth enable userpass
 
             # Create user
-            ocker exec -it vault vault write auth/userpass/users/${{VAULT_USER }} password=${{VAULT_PASSWORD }} policies=my-policy
+            docker exec -it vault vault write auth/userpass/users/${{USER_NAME }} password=${{PASSWORD }} policies=my-policy
 
             # Create policy file
             docker exec -it vault sh -c 'echo "
@@ -76,4 +89,4 @@ jobs:
             docker exec -it vault vault secrets enable -path=secret kv-v2
 
             # Add secret
-            docker exec -it vault vault kv put secret/myapp username="naski" password="supersecret123"
+            docker exec -it vault vault kv put secret/myapp username=${{ USER_NAME }} password=${{ secrets.PASSWORD }}
